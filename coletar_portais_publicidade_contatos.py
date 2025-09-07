@@ -323,7 +323,8 @@ def extract_domains_from_ckan_df(df):
     else:
         for col in veh_cols:
             for v in dfd[col].astype(str).tolist():
-                dom = extract_domain_any(v);  if dom: domains.add(dom)
+                dom = extract_domain_any(v);  
+                if dom: domains.add(dom)
     return domains
 
 
