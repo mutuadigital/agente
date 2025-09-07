@@ -318,7 +318,8 @@ def extract_domains_from_ckan_df(df):
     if not veh_cols:
         dfd["_join"] = dfd.apply(lambda r: " ".join([str(x) for x in r.values]), axis=1)
         for v in dfd["_join"].astype(str).tolist():
-            dom = extract_domain_any(v);  if dom: domains.add(dom)
+            dom = extract_domain_any(v);  
+            if dom: domains.add(dom)
     else:
         for col in veh_cols:
             for v in dfd[col].astype(str).tolist():
