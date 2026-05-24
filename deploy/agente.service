@@ -1,0 +1,15 @@
+[Unit]
+Description=Agente de Suporte Mútua Digital
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/agente
+EnvironmentFile=/opt/agente/.env
+ExecStart=/usr/bin/python3 /opt/agente/run.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

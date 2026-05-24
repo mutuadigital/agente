@@ -1,0 +1,177 @@
+{
+  "name": "Agente Mútua — Receber Chamado",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "claude-agent",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook Novo Chamado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-001",
+              "name": "ticket_id",
+              "value": "={{ $json.ticket_id }}",
+              "type": "number"
+            },
+            {
+              "id": "field-002",
+              "name": "cliente_nome",
+              "value": "={{ $json.user_name }}",
+              "type": "string"
+            },
+            {
+              "id": "field-003",
+              "name": "cliente_email",
+              "value": "={{ $json.user_email }}",
+              "type": "string"
+            },
+            {
+              "id": "field-004",
+              "name": "cliente_whatsapp",
+              "value": "={{ $json.user_phone }}",
+              "type": "string"
+            },
+            {
+              "id": "field-005",
+              "name": "assunto",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "field-006",
+              "name": "descricao",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "field-007",
+              "name": "data_abertura",
+              "value": "={{ $json.created_at }}",
+              "type": "string"
+            },
+            {
+              "id": "field-008",
+              "name": "url_resposta",
+              "value": "=https://agente.mutua.digital/webhook/ticket-update",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Formatar Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "suporte@mutua.digital",
+        "subject": "=🎫 Novo chamado #{{ $json.ticket_id }} — {{ $json.assunto }}",
+        "emailType": "html",
+        "message": "=<h2>Novo chamado aberto via WhatsApp</h2>\n<table border=\"1\" cellpadding=\"8\" style=\"border-collapse:collapse;\">\n  <tr><td><b>Chamado #</b></td><td>{{ $json.ticket_id }}</td></tr>\n  <tr><td><b>Cliente</b></td><td>{{ $json.cliente_nome }}</td></tr>\n  <tr><td><b>E-mail</b></td><td>{{ $json.cliente_email }}</td></tr>\n  <tr><td><b>WhatsApp</b></td><td>{{ $json.cliente_whatsapp }}</td></tr>\n  <tr><td><b>Assunto</b></td><td>{{ $json.assunto }}</td></tr>\n  <tr><td><b>Descrição</b></td><td>{{ $json.descricao }}</td></tr>\n  <tr><td><b>Aberto em</b></td><td>{{ $json.data_abertura }}</td></tr>\n</table>\n<br/>\n<p>Para responder este chamado, use o workflow <b>Responder Chamado</b> no n8n ou envie um POST para:</p>\n<code>{{ $json.url_resposta }}</code>\n<pre>{\n  \"ticket_id\": {{ $json.ticket_id }},\n  \"status\": \"em_andamento\",\n  \"message\": \"Sua resposta aqui\"\n}</pre>",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Enviar E-mail Suporte",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [680, 200],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Mútua Digital"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "value": "GOOGLE_SHEET_ID_AQUI",
+          "__rl": true,
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "Chamados",
+          "__rl": true,
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.ticket_id }}",
+            "Cliente": "={{ $json.cliente_nome }}",
+            "E-mail": "={{ $json.cliente_email }}",
+            "WhatsApp": "={{ $json.cliente_whatsapp }}",
+            "Assunto": "={{ $json.assunto }}",
+            "Descrição": "={{ $json.descricao }}",
+            "Status": "aberto",
+            "Data de Abertura": "={{ $json.data_abertura }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Registrar no Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, 420],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets Mútua"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Novo Chamado": {
+      "main": [
+        [
+          {
+            "node": "Formatar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Dados": {
+      "main": [
+        [
+          {
+            "node": "Enviar E-mail Suporte",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar no Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "v1-receber-chamado",
+  "id": "workflow-receber-chamado",
+  "tags": ["mutua-agente"]
+}

@@ -1,6 +1,5 @@
 import sqlite3
 import os
-from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -22,10 +21,9 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 phone TEXT UNIQUE NOT NULL,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                security_key_hash TEXT NOT NULL,
                 name TEXT NOT NULL,
-                email TEXT,
                 created_at TEXT DEFAULT (datetime('now'))
             );
 
@@ -52,7 +50,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS sessions (
                 phone TEXT PRIMARY KEY,
                 user_id INTEGER,
-                state TEXT NOT NULL DEFAULT 'UNAUTHENTICATED',
+                state TEXT NOT NULL DEFAULT 'AWAIT_IS_CLIENT',
                 data TEXT NOT NULL DEFAULT '{}',
                 updated_at TEXT DEFAULT (datetime('now'))
             );
@@ -61,11 +59,11 @@ def init_db():
 
 # --- User ---
 
-def create_user(phone, username, password, name, email=None):
+def create_user(phone, email, security_key, name):
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO users (phone, username, password_hash, name, email) VALUES (?, ?, ?, ?, ?)",
-            (phone, username, generate_password_hash(password), name, email),
+            "INSERT INTO users (phone, email, security_key_hash, name) VALUES (?, ?, ?, ?)",
+            (phone, email.lower().strip(), generate_password_hash(security_key), name),
         )
         return conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
 
@@ -75,18 +73,22 @@ def get_user_by_phone(phone):
         return conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
 
 
-def get_user_by_username(username):
+def get_user_by_email(email):
     with get_conn() as conn:
-        return conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        return conn.execute(
+            "SELECT * FROM users WHERE email = ?", (email.lower().strip(),)
+        ).fetchone()
 
 
-def verify_password(user_row, password):
-    return check_password_hash(user_row["password_hash"], password)
+def verify_security_key(user_row, key):
+    return check_password_hash(user_row["security_key_hash"], key)
 
 
-def username_exists(username):
+def email_exists(email):
     with get_conn() as conn:
-        row = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        row = conn.execute(
+            "SELECT id FROM users WHERE email = ?", (email.lower().strip(),)
+        ).fetchone()
         return row is not None
 
 
@@ -97,7 +99,8 @@ def get_session(phone):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM sessions WHERE phone = ?", (phone,)).fetchone()
         if row is None:
-            return {"state": "UNAUTHENTICATED", "user_id": None, "data": {}}
+            # First contact — ask if they're already a client
+            return {"state": "AWAIT_IS_CLIENT", "user_id": None, "data": {}}
         return {
             "state": row["state"],
             "user_id": row["user_id"],
