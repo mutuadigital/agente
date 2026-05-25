@@ -1,11 +1,34 @@
 import os
 import requests
 import logging
+from datetime import datetime, timezone, timedelta
 from . import database as db
 from .whatsapp import send_text
 from . import portfolio as pf
 
 logger = logging.getLogger(__name__)
+
+_SAO_PAULO = timezone(timedelta(hours=-3))
+
+
+def _fmt_dt(ts: str) -> str:
+    """'2026-05-25 00:36:00' (UTC) → '24/05/2026 21:36' (São Paulo)"""
+    try:
+        dt = datetime.strptime(ts[:19], "%Y-%m-%d %H:%M:%S")
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(_SAO_PAULO)
+        return dt.strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        return ts[:16]
+
+
+def _fmt_time(ts: str) -> str:
+    """'2026-05-25 00:36:00' (UTC) → '21:36' (São Paulo)"""
+    try:
+        dt = datetime.strptime(ts[:19], "%Y-%m-%d %H:%M:%S")
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(_SAO_PAULO)
+        return dt.strftime("%H:%M")
+    except Exception:
+        return ts[11:16]
 
 STATUS_LABELS = {
     "aberto": "🟡 Aberto",
@@ -345,13 +368,13 @@ def _show_ticket_detail(phone, ticket):
         f"🎫 *Chamado #{ticket['id']}*",
         f"📌 *Assunto:* {ticket['title']}",
         f"🔄 *Status:* {status}",
-        f"📅 *Aberto em:* {ticket['created_at'][:16]}",
+        f"📅 *Aberto em:* {_fmt_dt(ticket['created_at'])}",
         "",
         "💬 *Mensagens:*",
     ]
     for msg in messages:
         prefix = "👤 Você" if msg["sender"] == "cliente" else "🛠️ Suporte"
-        lines.append(f"\n{prefix} ({msg['created_at'][11:16]}):\n{msg['message']}")
+        lines.append(f"\n{prefix} ({_fmt_time(msg['created_at'])}):\n{msg['message']}")
     lines.append("\nDigite *atualizar* para ver novas mensagens ou *0* para voltar ao menu.")
     send_text(phone, "\n".join(lines))
 
