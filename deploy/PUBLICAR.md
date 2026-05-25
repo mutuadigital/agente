@@ -26,25 +26,30 @@ O agente estará acessível em `http://SEU_IP:5000`.
 
 ## Opção 2 — VPS sem Docker (systemd)
 
+> **Nota:** Ubuntu 23+ bloqueia `pip3` global. Use sempre um virtualenv.
+
 ```bash
-# 1. Clone o repositório
-git clone https://github.com/mutuadigital/agente.git /opt/agente
-cd /opt/agente
+# 1. Clone o repositório (já clonado? pule este passo)
+git clone https://github.com/mutuadigital/agente.git /var/www/agente
 
-# 2. Configure o .env
-cp .env.example .env
-nano .env
+# 2. Instale python3-venv se necessário
+sudo apt install python3-venv -y
 
-# 3. Instale as dependências
-pip3 install -r requirements.txt
+# 3. Crie o ambiente virtual e instale as dependências
+python3 -m venv /var/www/agente/venv
+/var/www/agente/venv/bin/pip install -r /var/www/agente/requirements.txt
 
-# 4. Instale o serviço systemd
-sudo cp deploy/agente.service /etc/systemd/system/
+# 4. Configure o .env
+cp /var/www/agente/.env.example /var/www/agente/.env
+nano /var/www/agente/.env   # preencha com os dados reais
+
+# 5. Instale o serviço systemd
+sudo cp /var/www/agente/deploy/agente.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable agente
 sudo systemctl start agente
 
-# 5. Verifique o status
+# 6. Verifique o status
 sudo systemctl status agente
 journalctl -u agente -f
 ```

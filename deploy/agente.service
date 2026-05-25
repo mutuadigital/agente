@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
-WorkingDirectory=/opt/agente
-EnvironmentFile=/opt/agente/.env
-ExecStart=/usr/bin/python3 /opt/agente/run.py
+User=root
+WorkingDirectory=/var/www/agente
+EnvironmentFile=/var/www/agente/.env
+ExecStart=/var/www/agente/venv/bin/python /var/www/agente/run.py
 Restart=always
 RestartSec=5
 
