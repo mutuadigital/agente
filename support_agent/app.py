@@ -1,6 +1,6 @@
 import logging
+import threading
 from flask import Flask, request, jsonify
-from . import database as db
 from .whatsapp import extract_phone, extract_message_text
 from . import conversation
 
@@ -8,11 +8,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-
-
-@app.before_request
-def _ensure_db():
-    db.init_db()
 
 
 @app.get("/health")
@@ -48,11 +43,15 @@ def webhook_whatsapp():
         return jsonify({"ok": True})
 
     logger.info("Mensagem recebida de %s: %s", phone, text[:80])
-    try:
-        conversation.handle_message(phone, text)
-    except Exception:
-        logger.exception("Erro ao processar mensagem de %s", phone)
 
+    # Process in background so webhook returns immediately (prevents retries)
+    def _process():
+        try:
+            conversation.handle_message(phone, text)
+        except Exception:
+            logger.exception("Erro ao processar mensagem de %s", phone)
+
+    threading.Thread(target=_process, daemon=True).start()
     return jsonify({"ok": True})
 
 
