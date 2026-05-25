@@ -36,6 +36,11 @@ def webhook_whatsapp():
         return jsonify({"ok": True})
 
     remote_jid = key.get("remoteJid", "")
+
+    # Ignore group chats, status broadcasts and newsletters
+    if not remote_jid.endswith("@s.whatsapp.net"):
+        return jsonify({"ok": True})
+
     phone = extract_phone(remote_jid)
     text = extract_message_text(data)
 
